@@ -47,13 +47,13 @@
         <button class="nb" data-ch="1" data-dir="-1" aria-label="-1"><i class="fa-solid fa-minus"></i></button>
         <span class="rd"><input class="inp" id="v1" type="number" min="0" max="180" value="90"><span class="sub" id="u1"></span></span>
         <button class="nb" data-ch="1" data-dir="1" aria-label="+1"><i class="fa-solid fa-plus"></i></button></div>
-      <div class="strip arm" data-ch="2"><label for="j2" data-i18n="j2">어깨</label><input type="range" id="j2" min="45" max="135" value="90">
+      <div class="strip arm" data-ch="2"><label for="j2" data-i18n="j2">어깨</label><input type="range" id="j2" min="0" max="180" value="90">
         <button class="nb" data-ch="2" data-dir="-1" aria-label="-1"><i class="fa-solid fa-minus"></i></button>
-        <span class="rd"><input class="inp" id="v2" type="number" min="45" max="135" value="90"><span class="sub" id="u2"></span></span>
+        <span class="rd"><input class="inp" id="v2" type="number" min="0" max="180" value="90"><span class="sub" id="u2"></span></span>
         <button class="nb" data-ch="2" data-dir="1" aria-label="+1"><i class="fa-solid fa-plus"></i></button></div>
-      <div class="strip arm" data-ch="3"><label for="j3" data-i18n="j3">팔꿈치</label><input type="range" id="j3" min="45" max="135" value="90">
+      <div class="strip arm" data-ch="3"><label for="j3" data-i18n="j3">팔꿈치</label><input type="range" id="j3" min="0" max="180" value="90">
         <button class="nb" data-ch="3" data-dir="-1" aria-label="-1"><i class="fa-solid fa-minus"></i></button>
-        <span class="rd"><input class="inp" id="v3" type="number" min="45" max="135" value="90"><span class="sub" id="u3"></span></span>
+        <span class="rd"><input class="inp" id="v3" type="number" min="0" max="180" value="90"><span class="sub" id="u3"></span></span>
         <button class="nb" data-ch="3" data-dir="1" aria-label="+1"><i class="fa-solid fa-plus"></i></button></div>
       <div class="strip arm" data-ch="4"><label for="j4" data-i18n="j4">집게</label><input type="range" id="j4" min="0" max="180" value="90">
         <button class="nb" data-ch="4" data-dir="-1" aria-label="-1"><i class="fa-solid fa-minus"></i></button>
@@ -251,7 +251,7 @@ wait 1600
       'warn.serial': '이 브라우저는 로봇 연결(Web Serial)을 지원하지 않아요. 3D 보기만 가능해요. 진짜 로봇은 Chrome / Edge 에서 움직여요.',
       'arm.title': '로봇팔 (ch1-4)', 'arm.live': '실시간',
       'j1': '회전', 'j2': '어깨', 'j3': '팔꿈치', 'j4': '집게',
-      'arm.note': '−/+ 는 1°씩, 꾹 누르면 계속 움직여요 · 어깨·팔꿈치는 45~135° 까지만 · 집게 0=활짝(45mm) 180=꽉(약 22mm)',
+      'arm.note': '−/+ 는 1°씩, 꾹 누르면 계속 움직여요 · 집게 0=활짝(45mm) 180=꽉(약 22mm)',
       'arm.move': '이 자세로 가기', 'arm.home': '집으로', 'arm.reset': '처음 자세', 'arm.resetTitle': 'ch1-3=90, 집게=0',
       'arm.slowHome': '천천히 가운데로', 'arm.slowHomeTitle': '집게 → 팔꿈치 → 어깨 → 회전 순서로 한 축씩 천천히 가운데(90°)로 갑니다',
       'arm.off': '힘 빼기', 'arm.on': '힘 주기',
@@ -298,7 +298,7 @@ wait 1600
       'warn.serial': "This browser can't talk to the robot (no Web Serial). You can still use the 3D view. Use Chrome / Edge to drive the real robot.",
       'arm.title': 'Robot Arm (ch1-4)', 'arm.live': 'LIVE',
       'j1': 'Turn', 'j2': 'Shoulder', 'j3': 'Elbow', 'j4': 'Gripper',
-      'arm.note': '−/+ moves 1°, hold to keep going · Shoulder and elbow are capped at 45–135° · Gripper 0=wide open(45mm) 180=closed(about 22mm)',
+      'arm.note': '−/+ moves 1°, hold to keep going · Gripper 0=wide open(45mm) 180=closed(about 22mm)',
       'arm.move': 'Go to this pose', 'arm.home': 'Home', 'arm.reset': 'Start pose', 'arm.resetTitle': 'ch1-3=90, gripper=0',
       'arm.slowHome': 'Slow to centre', 'arm.slowHomeTitle': 'Moves one axis at a time to 90 deg: gripper, elbow, shoulder, base',
       'arm.off': 'Relax', 'arm.on': 'Hold',
@@ -378,10 +378,11 @@ wait 1600
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
-  /* ===== 채널별 각도 리밋 (기구 보호) =====
-     ch2 어깨 · ch3 팔꿈치는 45~135° 밖으로 나가면 링크가 기구에 물려 서보가 스톨한다.
-     슬라이더뿐 아니라 콘솔 직접 입력(#m: / #j: / #raw:)까지 calOut() 에서 최종적으로 자른다. */
-  const LIM = { 1: [0, 180], 2: [45, 135], 3: [45, 135], 4: [0, 180], 6: [0, 180] };
+  /* ===== 채널별 각도 리밋 =====
+     지금은 전 채널 0~180 (제한 없음). 일자 조립이라 어깨·팔꿈치도 180 까지 나가야 한다.
+     기구가 물리는 각도를 실측하면 아래 LIM 한 줄만 고치면 된다 — 슬라이더뿐 아니라
+     콘솔 직접 입력(#m: / #j: / #raw:)까지 calOut() 에서 최종적으로 잘린다. */
+  const LIM = { 1: [0, 180], 2: [0, 180], 3: [0, 180], 4: [0, 180], 6: [0, 180] };
   const limOf   = ch => LIM[ch] || [0, 180];
   const clampCh = (ch, v) => { const [a, b] = limOf(ch); return clamp(Math.round(v) || 0, a, b); };
   const jointCh = i => (i < 4 ? i + 1 : 6);        // sim.joints 인덱스 → 채널 (0~3 = ch1~4, 4 = ch6)

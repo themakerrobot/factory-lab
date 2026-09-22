@@ -27,10 +27,13 @@ jobs:
             ./ build/site/
           cp tools/portable/main.go tools/portable/go.mod build/
 
-      - name: Embed icon
+      - name: Embed icon and version info
+        # 서명 없는 exe 는 Smart App Control 에 걸린다. 회사명·제품명·버전이 빈 칸이면 더 의심받으므로
+        # goversioninfo 로 VERSIONINFO 까지 채운다 (rsrc 는 아이콘만 넣는다).
         run: |
-          go install github.com/akavel/rsrc@v0.10.2
-          $(go env GOPATH)/bin/rsrc -ico tools/portable/icon.ico -o build/rsrc.syso
+          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.7.0
+          cp tools/portable/icon.ico tools/portable/versioninfo.json build/
+          cd build && $(go env GOPATH)/bin/goversioninfo -64 -o resource.syso versioninfo.json
 
       - name: Build exe
         run: cd build && GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o FactoryLab.exe .

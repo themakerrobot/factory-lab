@@ -21,9 +21,14 @@ copy /y tools\portable\go.mod "%STAGE%" >nul
 
 if not exist dist mkdir dist
 
-rem embed icon if rsrc is available (go install github.com/akavel/rsrc@latest)
-where rsrc >nul 2>nul
-if %errorlevel%==0 rsrc -ico tools\portable\icon.ico -o "%STAGE%\rsrc.syso"
+rem embed icon + version info (unsigned exes with blank version fields get flagged)
+copy /y tools\portable\icon.ico "%STAGE%" >nul
+copy /y tools\portable\versioninfo.json "%STAGE%" >nul
+where goversioninfo >nul 2>nul
+if not %errorlevel%==0 go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.7.0
+pushd "%STAGE%"
+goversioninfo -64 -o resource.syso versioninfo.json
+popd
 
 pushd "%STAGE%"
 go build -ldflags="-s -w" -o "%~dp0dist\FactoryLab.exe" .

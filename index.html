@@ -47,13 +47,13 @@
         <button class="nb" data-ch="1" data-dir="-1" aria-label="-1"><i class="fa-solid fa-minus"></i></button>
         <span class="rd"><input class="inp" id="v1" type="number" min="0" max="180" value="90"><span class="sub" id="u1"></span></span>
         <button class="nb" data-ch="1" data-dir="1" aria-label="+1"><i class="fa-solid fa-plus"></i></button></div>
-      <div class="strip arm" data-ch="2"><label for="j2" data-i18n="j2">어깨</label><input type="range" id="j2" min="0" max="180" value="90">
+      <div class="strip arm" data-ch="2"><label for="j2" data-i18n="j2">어깨</label><input type="range" id="j2" min="45" max="135" value="90">
         <button class="nb" data-ch="2" data-dir="-1" aria-label="-1"><i class="fa-solid fa-minus"></i></button>
-        <span class="rd"><input class="inp" id="v2" type="number" min="0" max="180" value="90"><span class="sub" id="u2"></span></span>
+        <span class="rd"><input class="inp" id="v2" type="number" min="45" max="135" value="90"><span class="sub" id="u2"></span></span>
         <button class="nb" data-ch="2" data-dir="1" aria-label="+1"><i class="fa-solid fa-plus"></i></button></div>
-      <div class="strip arm" data-ch="3"><label for="j3" data-i18n="j3">팔꿈치</label><input type="range" id="j3" min="0" max="180" value="90">
+      <div class="strip arm" data-ch="3"><label for="j3" data-i18n="j3">팔꿈치</label><input type="range" id="j3" min="45" max="135" value="90">
         <button class="nb" data-ch="3" data-dir="-1" aria-label="-1"><i class="fa-solid fa-minus"></i></button>
-        <span class="rd"><input class="inp" id="v3" type="number" min="0" max="180" value="90"><span class="sub" id="u3"></span></span>
+        <span class="rd"><input class="inp" id="v3" type="number" min="45" max="135" value="90"><span class="sub" id="u3"></span></span>
         <button class="nb" data-ch="3" data-dir="1" aria-label="+1"><i class="fa-solid fa-plus"></i></button></div>
       <div class="strip arm" data-ch="4"><label for="j4" data-i18n="j4">집게</label><input type="range" id="j4" min="0" max="180" value="90">
         <button class="nb" data-ch="4" data-dir="-1" aria-label="-1"><i class="fa-solid fa-minus"></i></button>
@@ -251,7 +251,7 @@ wait 1600
       'warn.serial': '이 브라우저는 로봇 연결(Web Serial)을 지원하지 않아요. 3D 보기만 가능해요. 진짜 로봇은 Chrome / Edge 에서 움직여요.',
       'arm.title': '로봇팔 (ch1-4)', 'arm.live': '실시간',
       'j1': '회전', 'j2': '어깨', 'j3': '팔꿈치', 'j4': '집게',
-      'arm.note': '−/+ 는 1°씩, 꾹 누르면 계속 움직여요 · 집게 0=활짝(45mm) 180=꽉(약 22mm)',
+      'arm.note': '−/+ 는 1°씩, 꾹 누르면 계속 움직여요 · 어깨·팔꿈치는 45~135° 까지만 · 집게 0=활짝(45mm) 180=꽉(약 22mm)',
       'arm.move': '이 자세로 가기', 'arm.home': '집으로', 'arm.reset': '처음 자세', 'arm.resetTitle': 'ch1-3=90, 집게=0',
       'arm.slowHome': '천천히 가운데로', 'arm.slowHomeTitle': '집게 → 팔꿈치 → 어깨 → 회전 순서로 한 축씩 천천히 가운데(90°)로 갑니다',
       'arm.off': '힘 빼기', 'arm.on': '힘 주기',
@@ -298,7 +298,7 @@ wait 1600
       'warn.serial': "This browser can't talk to the robot (no Web Serial). You can still use the 3D view. Use Chrome / Edge to drive the real robot.",
       'arm.title': 'Robot Arm (ch1-4)', 'arm.live': 'LIVE',
       'j1': 'Turn', 'j2': 'Shoulder', 'j3': 'Elbow', 'j4': 'Gripper',
-      'arm.note': '−/+ moves 1°, hold to keep going · Gripper 0=wide open(45mm) 180=closed(about 22mm)',
+      'arm.note': '−/+ moves 1°, hold to keep going · Shoulder and elbow are capped at 45–135° · Gripper 0=wide open(45mm) 180=closed(about 22mm)',
       'arm.move': 'Go to this pose', 'arm.home': 'Home', 'arm.reset': 'Start pose', 'arm.resetTitle': 'ch1-3=90, gripper=0',
       'arm.slowHome': 'Slow to centre', 'arm.slowHomeTitle': 'Moves one axis at a time to 90 deg: gripper, elbow, shoulder, base',
       'arm.off': 'Relax', 'arm.on': 'Hold',
@@ -378,6 +378,14 @@ wait 1600
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
+  /* ===== 채널별 각도 리밋 (기구 보호) =====
+     ch2 어깨 · ch3 팔꿈치는 45~135° 밖으로 나가면 링크가 기구에 물려 서보가 스톨한다.
+     슬라이더뿐 아니라 콘솔 직접 입력(#m: / #j: / #raw:)까지 calOut() 에서 최종적으로 자른다. */
+  const LIM = { 1: [0, 180], 2: [45, 135], 3: [45, 135], 4: [0, 180], 6: [0, 180] };
+  const limOf   = ch => LIM[ch] || [0, 180];
+  const clampCh = (ch, v) => { const [a, b] = limOf(ch); return clamp(Math.round(v) || 0, a, b); };
+  const jointCh = i => (i < 4 ? i + 1 : 6);        // sim.joints 인덱스 → 채널 (0~3 = ch1~4, 4 = ch6)
+
   /* ===== 영점 보정 (ch1-3, 전송값에만 반영) ===== */
   let calibMode = false;
   let cal = [0, 0, 0];
@@ -385,17 +393,22 @@ wait 1600
   const saveCal = () => { try { localStorage.setItem(CAL_KEY, JSON.stringify(cal)); } catch {} };
   const calOf = ch => (ch >= 1 && ch <= 3) ? cal[ch - 1] : 0;       // ch = 1..4
   const hasCal = () => cal.some(v => v);
-  const withCal = (ch, v) => clamp(Math.round(v + calOf(ch)), 0, 180);
+  const withCal = (ch, v) => clampCh(ch, v + calOf(ch));
   // 실물 서보가 화면과 반대로 도는 축 — 로봇으로 나가는 각도만 뒤집는다 (슬라이더·3D 값은 그대로)
   const FLIP = { 2: true, 3: true };
-  const toMotor   = (ch, v) => withCal(ch, FLIP[ch] ? 180 - clamp(Math.round(v), 0, 180) : v);
-  const fromMotor = (ch, v) => { const u = clamp(Math.round(v) - calOf(ch), 0, 180); return FLIP[ch] ? 180 - u : u; };
+  const toMotor   = (ch, v) => withCal(ch, FLIP[ch] ? 180 - clampCh(ch, v) : clampCh(ch, v));
+  const fromMotor = (ch, v) => { const u = clampCh(ch, v - calOf(ch)); return FLIP[ch] ? clampCh(ch, 180 - u) : u; };
   function calOut(cmd) {        // 로봇으로 나가는 명령에만 오프셋 적용
     let x;
     if ((x = cmd.match(/^#m:(-?\d+),(-?\d+),(-?\d+),(-?\d+)(.*)$/)))
       return `#m:${[1, 2, 3, 4].map(ch => toMotor(ch, +x[ch])).join(',')}${x[5]}`;
     if ((x = cmd.match(/^#j:(\d+),(-?\d+)(.*)$/)))
       return `#j:${x[1]},${toMotor(+x[1], +x[2])}${x[3]}`;
+    if ((x = cmd.match(/^#raw:(\d+),(-?\d+)(.*)$/))) {   // 펄스폭 직접 지령도 같은 리밋 안으로 접는다
+      const ch = +x[1], us = clamp(+x[2], US_MIN, US_MAX);
+      if (ch >= 1 && ch <= 4) return `#raw:${ch},${angToUs(clampCh(ch, usToAng(us)))}${x[3]}`;
+      return `#raw:${ch},${us}${x[3]}`;
+    }
     return cmd;
   }
 
@@ -412,7 +425,7 @@ wait 1600
   };
   function simMove(i, target) {
     const j = sim.joints[i]; if (!j) return;
-    target = clamp(target, 0, 180);
+    target = clampCh(jointCh(i), target);
     const d = Math.abs(target - j.cur);
     j.from = j.cur; j.to = target; j.t0 = performance.now();
     j.dur = d < 0.5 ? 0 : (d / j.dps) * 1000;
@@ -421,7 +434,7 @@ wait 1600
   }
   function simSet(i, v) {       // 타임라인: 보간값을 즉시 반영
     const j = sim.joints[i]; if (!j) return;
-    j.cur = j.from = j.to = clamp(v, 0, 180); j.dur = 0;
+    j.cur = j.from = j.to = clampCh(jointCh(i), v); j.dur = 0;
     sim.released = false;
   }
   function simStop() { sim.joints.forEach(j => { j.dur = 0; j.to = j.cur; }); }
@@ -957,8 +970,8 @@ wait 1600
         tl.dur = clamp(Math.round(d.duration || 30), 1, 120);
         tl.kfs = (d.keyframes || []).map((k, i) => ({
           id: i, time: Math.round(k.time || 0),
-          joints: Array.isArray(k.joints) ? k.joints.slice(0, 4).map(Number)
-                  : names.map((n, j) => +(k.joints?.[n] ?? (j === 3 ? 0 : 90)))
+          joints: (Array.isArray(k.joints) ? k.joints.slice(0, 4).map(Number)
+                  : names.map((n, j) => +(k.joints?.[n] ?? (j === 3 ? 0 : 90)))).map((v, j) => clampCh(j + 1, v))
         }));
       } else {                                               // m:.. / #m:..! / sleep 초
         const kfs = []; let tt = 0;
@@ -1124,7 +1137,7 @@ wait 1600
     else if (/^#off/.test(cmd)) { simStop(); sim.roller = 0; beltDir = 0; sim.released = true; }
     else if (/^#on/.test(cmd)) sim.released = false;
     else if ((x = cmd.match(/^#raw:(\d+),(\d+)/))) {
-      const ch = +x[1], ang = clamp(Math.round((+x[2] - 544) / (2400 - 544) * 180), 0, 180);
+      const ch = +x[1], ang = clampCh(ch, usToAng(clamp(+x[2], US_MIN, US_MAX)));
       if (ch === 5) sim.roller = ang - 90;
       else if (ch === 6) simMove(4, ang);
       else if (ch >= 1 && ch <= 4) simMove(ch - 1, ang);
@@ -1161,18 +1174,18 @@ wait 1600
   }
 
   /* ===== 컨트롤 ===== */
-  function setSlider(i, v) { $('j' + i).value = v; $('v' + i).value = v; }
+  function setSlider(i, v) { const w = clampCh(i, v); $('j' + i).value = w; $('v' + i).value = w; }
   function setJoint(i, v) {
-    v = clamp(Math.round(+v || 0), 0, 180);
+    v = clampCh(i, +v || 0);
     setSlider(i, v);
     if ($('liveArm').checked) send(`#j:${i},${v}!`); else simMove(i - 1, v);
   }
   for (let i = 1; i <= 4; i++) {
-    $('j' + i).addEventListener('input', e => { if (tl.playing) setPlay(false); $('v' + i).value = e.target.value; simMove(i - 1, +e.target.value); });
+    $('j' + i).addEventListener('input', e => { if (tl.playing) setPlay(false); const w = clampCh(i, +e.target.value); $('v' + i).value = w; simMove(i - 1, w); });
     $('j' + i).addEventListener('change', e => setJoint(i, e.target.value));
     $('v' + i).addEventListener('change', e => setJoint(i, e.target.value));
   }
-  const armVals = () => [1, 2, 3, 4].map(i => clamp(Math.round(+$('v' + i).value || 0), 0, 180));
+  const armVals = () => [1, 2, 3, 4].map(i => clampCh(i, +$('v' + i).value || 0));
 
   // −/+ 미세조정 (클릭 1°, 길게 누르면 연속) — 영점 모드에서는 ch1-3 오프셋 조정
   function nudge(ch, dir) {
@@ -1183,7 +1196,7 @@ wait 1600
       return;
     }
     if (tl.playing) setPlay(false);
-    const v = clamp(+$('v' + ch).value + dir, 0, 180);
+    const v = clampCh(ch, +$('v' + ch).value + dir);
     setSlider(ch, v);
     simMove(ch - 1, v);
     liveArmTick();
@@ -1262,6 +1275,8 @@ wait 1600
   let poses = {};
   try { poses = JSON.parse(localStorage.getItem(PKEY) || '{}'); } catch {}
   if (!Object.keys(poses).length) poses = { home: [90,90,90,90], pick: [40,120,110,30], place: [90,120,110,150] };
+  // 리밋(ch2/ch3 45~135) 도입 전에 저장된 프리셋에 범위 밖 값이 있을 수 있다
+  for (const k of Object.keys(poses)) poses[k] = (poses[k] || []).slice(0, 4).map((v, i) => clampCh(i + 1, +v));
   function savePoses() { try { localStorage.setItem(PKEY, JSON.stringify(poses)); } catch {} renderPoses(); }
   function renderPoses() {
     const box = $('presets'); box.innerHTML = '';
@@ -1271,8 +1286,9 @@ wait 1600
       b.onclick = ev => {
         if (ev.shiftKey) { delete poses[name]; savePoses(); return; }
         setPlay(false);
-        v.forEach((a, i) => setSlider(i + 1, a));
-        send(`#m:${v.join(',')}!`);
+        const w = v.map((a, i) => clampCh(i + 1, a));
+        w.forEach((a, i) => setSlider(i + 1, a));
+        send(`#m:${w.join(',')}!`);
       };
       box.appendChild(b);
     }
@@ -1298,7 +1314,7 @@ wait 1600
       let v;
       if (Array.isArray(d)) v = d.slice(0, 4);
       else v = names.map((n, i) => d[n] ?? d['ch' + (i + 1)] ?? Object.values(d)[i]);
-      v = v.map(x => clamp(Math.round(+x), 0, 180)).map((x, i) => isNaN(x) ? +$('v' + (i + 1)).value : x);
+      v = v.map((x, i) => isNaN(+x) ? +$('v' + (i + 1)).value : clampCh(i + 1, +x));
       setPlay(false);
       v.forEach((a, i) => setSlider(i + 1, a));
       send(`#m:${v.join(',')}!`);

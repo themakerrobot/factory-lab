@@ -1,0 +1,55 @@
+name: Tag & Release FactoryLab.exe
+
+# 태그 push 가 막힌 환경에서 쓰는 수동 배포:
+# Actions 탭에서 버전을 입력해 실행하면 태그 생성 → exe 빌드 → Release 첨부까지 한다.
+# (GITHUB_TOKEN 으로 만든 태그는 build-exe.yml 을 다시 트리거하지 않으므로 중복 빌드 없음)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag name (e.g. v0.1)'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ inputs.version }}"
+          git push origin "refs/tags/${{ inputs.version }}"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Stage site files
+        run: |
+          mkdir -p build/site
+          rsync -a \
+            --exclude='.git' --exclude='.github' --exclude='dist' --exclude='tools' --exclude='build' \
+            --exclude='*.bat' --exclude='*.zip' --exclude='*.exe' \
+            --exclude='.gitignore' --exclude='.assetsignore' --exclude='wrangler.toml' --exclude='README.md' \
+            ./ build/site/
+          cp tools/portable/main.go tools/portable/go.mod build/
+
+      - name: Embed icon
+        run: |
+          go install github.com/akavel/rsrc@v0.10.2
+          $(go env GOPATH)/bin/rsrc -ico tools/portable/icon.ico -o build/rsrc.syso
+
+      - name: Build exe
+        run: cd build && GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o FactoryLab.exe .
+
+      - name: Attach to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          files: build/FactoryLab.exe

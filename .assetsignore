@@ -5,3 +5,6 @@ node_modules
 .assetsignore
 wrangler.toml
 README.md
+tools/
+dist/
+*.bat
